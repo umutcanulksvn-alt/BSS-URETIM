@@ -171,6 +171,70 @@ button{border:0;border-radius:9px;min-height:44px;padding:0 15px;font-weight:bol
 
 .editor-footer{display:block;padding:14px 20px;border-top:1px solid #e5e7eb}
 .editor-done{width:100%;min-height:46px;font-size:14px}
+
+.machine-note-section{margin-top:18px}
+.machine-note-section label,.history-filter label{display:block;font-size:13px;font-weight:800;margin-bottom:6px}
+.machine-note-section textarea{
+ width:100%;resize:vertical;min-height:90px;padding:11px;
+ border:1px solid #d1d5db;border-radius:10px;font:inherit;font-size:14px;
+}
+.history-filter{background:#f8fafc;border:1px solid #e5e7eb;border-radius:11px;padding:12px;margin-bottom:14px}
+.history-filter input{width:100%;height:44px;border:1px solid #d1d5db;border-radius:9px;padding:0 10px;font-size:16px;background:white}
+.history-list{display:flex;flex-direction:column;gap:9px}
+.history-row{border:1px solid #dfe3e8;border-radius:11px;padding:12px;background:#fff}
+.history-row-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.history-machine{font-weight:800;font-size:15px}
+.history-statuses{font-size:12px;color:#334155;margin-top:7px;line-height:1.5}
+.history-note{margin-top:8px;background:#f8fafc;border-radius:8px;padding:9px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.history-empty{text-align:center;padding:30px;color:#64748b;background:#f8fafc;border-radius:11px}
+
+@media (max-width:560px){
+  body{font-size:13px}
+  .container{padding:8px;max-width:100%}
+  .top-buttons{gap:5px;margin-bottom:8px}
+  .top-buttons button{min-height:36px;padding:6px 8px;font-size:11px}
+  .machine{margin-bottom:5px;border-radius:8px}
+  .machine-header{min-height:48px;padding:7px 9px}
+  .machine-number{width:27px;height:27px;font-size:11px}
+  .machine-name{font-size:13px}
+  .machine-summary{font-size:9px;margin-top:2px;line-height:1.15}
+  .arrow{font-size:20px}
+  .header h1{font-size:17px}
+  .header p{font-size:10px;margin:2px 0 7px}
+}
+
+@media (max-width:560px){
+  .machine-editor-modal{padding:8px}
+  .machine-editor-box{max-height:94vh;border-radius:10px}
+  .editor-top{padding:10px 12px}
+  .editor-title{font-size:16px}
+  .editor-subtitle{font-size:10px;margin-top:2px}
+  .editor-close{min-width:34px;height:34px}
+  .editor-content{padding:10px 12px}
+  .editor-section-title{font-size:14px}
+  .editor-help{font-size:10px;margin:3px 0 8px}
+  .all-statuses{gap:5px}
+  .big-option{
+    min-height:42px;
+    padding:6px 8px;
+    border-radius:8px;
+    gap:6px
+  }
+  .big-option input{width:17px;height:17px}
+  .big-option-icon{font-size:15px}
+  .big-option-name{font-size:10.5px;line-height:1.1}
+  .check-mark{font-size:15px;width:16px}
+  .machine-note-section{margin-top:10px}
+  .machine-note-section label{font-size:11px;margin-bottom:4px}
+  .machine-note-section textarea{
+    min-height:55px;
+    padding:7px;
+    font-size:11px;
+    border-radius:7px
+  }
+  .editor-footer{padding:8px 12px}
+  .editor-done{min-height:38px;font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -179,6 +243,7 @@ button{border:0;border-radius:9px;min-height:44px;padding:0 15px;font-weight:bol
 <div class="top-buttons">
 <button class="light" id="machinesPageBtn">⚙ Makineler</button>
 <button class="light" id="statusesPageBtn">☷ Durum Seçenekleri</button>
+<button class="light" id="historyPageBtn">📅 Geçmiş</button>
 <button class="light" id="resetBtn">↻ İşleri Sıfırla</button>
 <button class="dark" id="reportBtn">📄 PDF</button>
 </div>
@@ -217,6 +282,26 @@ button{border:0;border-radius:9px;min-height:44px;padding:0 15px;font-weight:bol
    <div id="statusManagementList" class="management-list"></div>
   </div>
  </div>
+</div>
+
+
+<div id="historyPage" class="management-page">
+ <div class="management-box">
+  <div class="management-header">
+   <div>
+    <div class="management-title">Geçmiş Kayıtlar</div>
+    <div class="management-subtitle">Tarihe göre makinelerin eski durumlarını ve notlarını görüntüle</div>
+   </div>
+   <button class="light page-close" id="historyClose" type="button">✕</button>
+  </div>
+  <div class="management-content">
+   <div class="history-filter">
+    <label for="historyDate">Tarih</label>
+    <input type="date" id="historyDate">
+   </div>
+   <div id="historyList" class="history-list"></div>
+ </div>
+</div>
 </div>
 
 <div id="reportModal" class="modal">
@@ -270,6 +355,18 @@ function loadData(){
   if(Array.isArray(d.statuses)&&d.statuses.length)statuses=d.statuses;
   if(d.records&&typeof d.records==="object")records=d.records;
  }catch(e){}
+}
+
+
+function getNote(machineId,date=todayKey()){
+ return records[date]?.notes?.[machineId] || "";
+}
+
+function setNote(machineId,note,date=todayKey()){
+ if(!records[date])records[date]={};
+ if(!records[date].notes)records[date].notes={};
+ records[date].notes[machineId]=note;
+ saveData();
 }
 
 function getSelected(machineId,date=todayKey()){
@@ -353,6 +450,10 @@ function openMachineEditor(machineId){
        <span class="check-mark">${selected.includes(s.id)?"✓":""}</span>
       </label>`).join("")}
     </div>
+    <div class="machine-note-section">
+     <label for="machineNote">Makine Notu</label>
+     <textarea id="machineNote" rows="4" placeholder="Bu makine için bugün not yaz..."></textarea>
+    </div>
    </div>
    <div class="editor-footer">
     <button class="primary editor-done" type="button">✓ Tamam</button>
@@ -360,6 +461,9 @@ function openMachineEditor(machineId){
   </div>`;
 
  document.body.appendChild(modal);
+ const noteBox=modal.querySelector("#machineNote");
+ noteBox.value=getNote(machineId);
+ noteBox.addEventListener("input",()=>setNote(machineId,noteBox.value));
  modal.querySelector(".editor-close").onclick=()=>modal.remove();
  modal.querySelector(".editor-done").onclick=()=>modal.remove();
  modal.onclick=e=>{if(e.target===modal)modal.remove()};
@@ -488,6 +592,40 @@ function renderStatusManagement(){
 function openPage(id){document.getElementById(id)?.classList.add("open")}
 function closePage(id){document.getElementById(id)?.classList.remove("open")}
 
+
+function renderHistory(){
+ const date=document.getElementById("historyDate").value;
+ const list=document.getElementById("historyList");
+ if(!list)return;
+ if(!date){
+  list.innerHTML='<div class="history-empty">Bir tarih seçin.</div>';
+  return;
+ }
+ const rows=machines.map((m,i)=>{
+  const selected=getSelected(m.id,date);
+  const note=getNote(m.id,date);
+  const statusText=selected.map(id=>{
+   const s=statuses.find(x=>x.id===id);
+   return s?s.icon+" "+s.name:"";
+  }).filter(Boolean).join(" • ") || "Durum seçilmedi";
+  return `<div class="history-row">
+   <div class="history-row-head">
+    <div class="history-machine">${i+1}. ${escapeHtml(m.name)}</div>
+   </div>
+   <div class="history-statuses">${escapeHtml(statusText)}</div>
+   ${note.trim()?`<div class="history-note"><strong>Not:</strong> ${escapeHtml(note)}</div>`:""}
+  </div>`;
+ }).join("");
+ list.innerHTML=rows || '<div class="history-empty">Kayıt bulunmuyor.</div>';
+}
+
+function openHistory(){
+ const input=document.getElementById("historyDate");
+ input.value=todayKey();
+ renderHistory();
+ openPage("historyPage");
+}
+
 function openReport(){
  document.getElementById("reportDate").value=todayKey();
  document.getElementById("reportModal").style.display="flex";
@@ -511,10 +649,11 @@ function createReport(){
    return s?s.icon+" "+s.name:"";
   }).filter(Boolean).join(" • ")||"Durum seçilmedi";
 
+  const note=getNote(m.id,date);
   return `<tr>
     <td class="no">${i+1}</td>
     <td class="machine">${escapeHtml(m.name)}</td>
-    <td class="status">${escapeHtml(text)}</td>
+    <td class="status">${escapeHtml(text)}${note.trim()?`<div class="pdf-note"><b>Not:</b> ${escapeHtml(note)}</div>`:""}</td>
   </tr>`;
  }).join("");
 
@@ -583,6 +722,7 @@ function createReport(){
  tr{page-break-inside:avoid;height:9.4mm}
  tbody tr td{font-size:10px}
 tr{page-break-inside:avoid}
+ .pdf-note{margin-top:3px;font-size:9px;color:#444}
  .footer{
    margin-top:5px;
    padding-top:3px;
@@ -639,8 +779,11 @@ function resetData(){
 
 document.getElementById("machinesPageBtn").onclick=()=>{renderMachineManagement();openPage("machinesPage")};
 document.getElementById("statusesPageBtn").onclick=()=>{renderStatusManagement();openPage("statusesPage")};
+document.getElementById("historyPageBtn").onclick=openHistory;
+document.getElementById("historyDate").onchange=renderHistory;
 document.getElementById("machinesClose").onclick=()=>closePage("machinesPage");
 document.getElementById("statusesClose").onclick=()=>closePage("statusesPage");
+document.getElementById("historyClose").onclick=()=>closePage("historyPage");
 document.getElementById("reportBtn").onclick=openReport;
 document.getElementById("closeReportBtn").onclick=closeReport;
 document.getElementById("createReportBtn").onclick=createReport;
