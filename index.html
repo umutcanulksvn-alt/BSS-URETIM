@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Üretim Makine Kontrol</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:white;padding:18px}
+.header{max-width:850px;margin:auto}
+h1{margin:0;font-size:22px}.subtitle{margin-top:5px;color:#cbd5e1;font-size:13px}
+.container{max-width:850px;margin:auto;padding:15px}
+.top-buttons{display:flex;justify-content:flex-end;gap:10px;margin-bottom:15px}
+button{border:0;border-radius:9px;min-height:44px;padding:0 15px;font-weight:bold;cursor:pointer}
+.primary{background:#2563eb;color:white}.dark{background:#111827;color:white}.light{background:white;border:1px solid #d1d5db}
+.machine-list{display:flex;flex-direction:column;gap:10px}
+.machine{background:white;border:1px solid #dfe3e8;border-radius:12px;overflow:hidden}
+.machine-header{min-height:72px;padding:12px 15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.machine-header:hover{background:#f8fafc}
+.machine-info{display:flex;align-items:center;gap:12px}.machine-number{width:40px;height:40px;border-radius:8px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.machine-name{font-size:16px;font-weight:bold}.machine-summary{margin-top:4px;font-size:12px;color:#64748b}.arrow{font-size:18px;color:#64748b}
+.machine-options{display:none;border-top:1px solid #e5e7eb;background:#f8fafc;padding:14px}
+.machine.open .machine-options{display:block}
+.option{background:white;border:1px solid #d1d5db;border-radius:9px;margin-bottom:8px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.option input{width:20px;height:20px}.option.checked{border-color:#2563eb;background:#eff6ff}
+.machine-tools{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}.machine-tools button{min-height:38px;font-size:12px}
+.save-status{width:100%;margin-top:8px;background:#2563eb;color:white}
+.menu-wrap{position:relative}
+.menu-panel{position:absolute;top:52px;left:0;min-width:230px;z-index:50;background:white;border:1px solid #dfe3e8;border-radius:12px;padding:8px;margin-top:8px}
+.menu-item{width:100%;text-align:left;background:white;border:0;border-bottom:1px solid #eee;border-radius:8px;min-height:44px}
+.menu-item:last-child{border-bottom:0}
+.menu-item:hover{background:#f8fafc}
+.panel{background:white;border:1px solid #dfe3e8;border-radius:12px;padding:15px;margin-top:15px}.panel h2{font-size:16px;margin-top:0}
+.status-row{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:10px 0}.status-row:last-child{border-bottom:0}
+.status-actions{display:flex;gap:5px}.small{min-height:34px;padding:4px 9px;font-size:11px}
+.empty{background:white;border-radius:12px;padding:40px;text-align:center;color:#64748b}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:15px}
+.modal-box{width:100%;max-width:430px;background:white;border-radius:14px;padding:20px}.modal-title{font-size:19px;font-weight:bold;margin-bottom:15px}
+.modal label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}.modal input[type=date]{width:100%;height:46px;border:1px solid #d1d5db;border-radius:9px;padding:0 10px;font-size:16px}
+.modal-buttons{display:flex;gap:8px;margin-top:15px}.modal-buttons button{flex:1}
+@media(max-width:500px){.top-buttons{display:grid;grid-template-columns:1fr 1fr}.bottom{grid-template-columns:1fr}}
+@media print{body{background:white}header{background:white;color:black;border-bottom:2px solid black}.subtitle{color:black}.top-buttons,.management-page,.panel,.machine-options,.machine-tools{display:none!important}.machine-list{gap:0}.machine{border:1px solid #999;border-radius:0;page-break-inside:avoid}}
+
+.machine-editor-modal{
+ position:fixed;
+ inset:0;
+ background:rgba(15,23,42,.58);
+ z-index:2000;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ padding:15px;
+}
+.machine-editor-box{
+ width:min(760px,100%);
+ max-height:92vh;
+ background:white;
+ border-radius:16px;
+ overflow:hidden;
+ display:flex;
+ flex-direction:column;
+ box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+.editor-top{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ padding:18px 20px;
+ border-bottom:1px solid #e5e7eb;
+}
+.editor-title{font-size:21px;font-weight:800}
+.editor-subtitle{font-size:13px;color:#64748b;margin-top:4px}
+.editor-close{min-width:44px;padding:0}
+.editor-content{padding:18px 20px;overflow:auto}
+.editor-section-title{font-size:17px;font-weight:800}
+.editor-help{font-size:13px;color:#64748b;margin:5px 0 15px}
+.all-statuses{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.big-option{
+ min-height:58px;
+ border:1px solid #d1d5db;
+ border-radius:11px;
+ background:#f8fafc;
+ display:flex;
+ align-items:center;
+ gap:10px;
+ padding:10px 12px;
+ cursor:pointer;
+}
+.big-option.checked{border-color:#2563eb;background:#eff6ff}
+.big-option input{width:21px;height:21px;flex:none}
+.big-option-icon{font-size:20px}
+.big-option-name{font-size:13px;font-weight:700;line-height:1.25;flex:1}
+.check-mark{font-size:19px;font-weight:800;color:#2563eb;width:20px;text-align:center}
+.editor-footer{
+ padding:14px 20px;
+ border-top:1px solid #e5e7eb;
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:8px;
+}
+.editor-footer button{min-height:42px}
+.editor-done{grid-column:1/-1}
+@media(max-width:560px){
+ .machine-editor-box{max-height:96vh;border-radius:14px}
+ .all-statuses{grid-template-columns:1fr}
+ .editor-footer{grid-template-columns:1fr 1fr;padding:12px}
+ .editor-title{font-size:19px}
+}
+
+.management-page{
+ position:fixed;
+ inset:0;
+ z-index:1800;
+ background:#f3f4f6;
+ display:none;
+ overflow:auto;
+ padding:15px;
+}
+.management-page.open{display:flex;justify-content:center;align-items:flex-start}
+.management-box{
+ width:min(760px,100%);
+ min-height:calc(100vh - 30px);
+ background:white;
+ border-radius:16px;
+ overflow:hidden;
+ display:flex;
+ flex-direction:column;
+}
+.management-header{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ padding:18px 20px;
+ border-bottom:1px solid #e5e7eb;
+ position:sticky;
+ top:0;
+ background:white;
+ z-index:2;
+}
+.management-title{font-size:21px;font-weight:800}
+.management-subtitle{font-size:13px;color:#64748b;margin-top:4px}
+.page-close{min-width:44px;padding:0}
+.management-content{padding:16px 20px}
+.add-wide{width:100%;margin-bottom:14px}
+.management-list{display:flex;flex-direction:column;gap:8px}
+.management-row{
+ display:flex;
+ align-items:center;
+ gap:10px;
+ border:1px solid #dfe3e8;
+ border-radius:11px;
+ padding:10px;
+ background:#f8fafc;
+}
+.management-index{
+ width:34px;height:34px;border-radius:8px;background:#e5e7eb;
+ display:flex;align-items:center;justify-content:center;font-weight:bold;flex:none;
+}
+.management-name{flex:1;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.management-actions{display:flex;gap:5px;flex-wrap:wrap}
+.management-actions button{min-height:36px;padding:5px 9px;font-size:11px}
+@media(max-width:560px){
+ .management-page{padding:0}
+ .management-box{min-height:100vh;border-radius:0}
+ .management-header{padding:15px}
+ .management-content{padding:14px}
+ .management-row{align-items:flex-start}
+ .management-actions{display:grid;grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<header><div class="header"><h1>Üretim Makine Kontrol</h1><div class="subtitle">Makine durum takip sistemi</div></div></header>
+<div class="container">
+<div class="top-buttons">
+<button class="light" id="machinesPageBtn">⚙ Makineler</button>
+<button class="light" id="statusesPageBtn">☷ Durum Seçenekleri</button>
+<button class="light" id="resetBtn">↻ İşleri Sıfırla</button>
+<button class="dark" id="reportBtn">📄 PDF</button>
+</div>
+<div id="machineList" class="machine-list"></div>
+
+</div>
+
+
+<div id="machinesPage" class="management-page">
+ <div class="management-box">
+  <div class="management-header">
+   <div>
+    <div class="management-title">Makineler</div>
+    <div class="management-subtitle">Makine ekle, sil, düzenle ve sırasını değiştir</div>
+   </div>
+   <button class="light page-close" id="machinesClose">✕</button>
+  </div>
+  <div class="management-content">
+   <button class="primary add-wide" id="addMachineBtn">＋ Yeni Makine Ekle</button>
+   <div id="machineManagementList" class="management-list"></div>
+  </div>
+ </div>
+</div>
+
+<div id="statusesPage" class="management-page">
+ <div class="management-box">
+  <div class="management-header">
+   <div>
+    <div class="management-title">Durum Seçenekleri</div>
+    <div class="management-subtitle">Seçenek ekle, sil, düzenle ve sırasını değiştir</div>
+   </div>
+   <button class="light page-close" id="statusesClose">✕</button>
+  </div>
+  <div class="management-content">
+   <button class="primary add-wide" id="addStatusBtn">＋ Yeni Durum Ekle</button>
+   <div id="statusManagementList" class="management-list"></div>
+  </div>
+ </div>
+</div>
+
+<div id="reportModal" class="modal">
+<div class="modal-box">
+<div class="modal-title">PDF Raporu Oluştur</div>
+<label for="reportDate">Rapor Tarihi</label>
+<input type="date" id="reportDate">
+<div class="modal-buttons">
+<button class="light" id="closeReportBtn">Vazgeç</button>
+<button class="primary" id="createReportBtn">PDF Oluştur</button>
+</div>
+</div>
+</div>
+
+<script>
+const STORAGE_KEY="productionMachineControlV3";
+
+const REQUIRED_MACHINE_NAMES=[
+ "B1","B13","B2","B3","B12","B4","BT1","B5","B6","B7","BT2","BT3","BT4","BT5",
+ "B8","B9","B10","B11","T1","T2","T3","T4","T5"
+];
+
+const DEFAULT_STATUSES=[
+ ["İŞ VAR","🟢"],["İŞ YOK","⚪"],["İŞ BAŞLATILMIŞ","🔵"],
+ ["İŞ BAŞLATILMAMIŞ","⚪"],["İŞ BİTİR YAPMIŞ","🟢"],["İŞ BİTİR YAPMAMIŞ","🟠"],
+ ["OPERATÖR YOK","🔴"],["MAKİNE AYARDA","🟠"],["MAKİNE BAKIMDA","🟠"],
+ ["MAKİNE VE IOT KART KONTROL EDİLECEK","🟡"],["ENVANTER EKSİK","🟡"],
+ ["ENVANTER ARIZASI MEVCUT","🔴"],["OPERATÖR EĞİTİMİ VERİLDİ","🟢"],
+ ["OPERATÖR EĞİTİMİ TEKRAR VERİLDİ","🔵"]
+];
+
+let machines=REQUIRED_MACHINE_NAMES.map((name,i)=>({id:i+1,name}));
+let statuses=DEFAULT_STATUSES.map((x,i)=>({id:"status_"+(i+1),name:x[0],icon:x[1]}));
+let records={};
+
+function todayKey(){
+ const d=new Date();
+ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function saveData(){
+ localStorage.setItem(STORAGE_KEY,JSON.stringify({machines,statuses,records}));
+}
+
+function loadData(){
+ const raw=localStorage.getItem(STORAGE_KEY);
+ if(!raw)return;
+ try{
+  const d=JSON.parse(raw);
+  if(Array.isArray(d.machines)&&d.machines.length)machines=d.machines;
+  if(Array.isArray(d.statuses)&&d.statuses.length)statuses=d.statuses;
+  if(d.records&&typeof d.records==="object")records=d.records;
+ }catch(e){}
+}
+
+function getSelected(machineId,date=todayKey()){
+ return Array.isArray(records[date]?.[machineId]) ? records[date][machineId] : [];
+}
+
+function setSelected(machineId,selected,date=todayKey()){
+ if(!records[date])records[date]={};
+ records[date][machineId]=selected;
+ saveData();
+}
+
+function escapeHtml(text){
+ return String(text).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+function summaryText(machineId,date=todayKey()){
+ const selected=getSelected(machineId,date);
+ if(!selected.length)return "Durum seçilmedi";
+ return selected.map(id=>{
+  const s=statuses.find(x=>x.id===id);
+  return s?s.icon+" "+s.name:"";
+ }).filter(Boolean).join(" • ");
+}
+
+function render(){
+ const list=document.getElementById("machineList");
+ if(!list)return;
+ list.innerHTML="";
+ if(!machines.length){
+  list.innerHTML='<div class="empty">Henüz makine eklenmedi.</div>';
+  return;
+ }
+ machines.forEach((m,index)=>{
+  const div=document.createElement("div");
+  div.className="machine";
+  div.innerHTML=`
+   <div class="machine-header">
+    <div class="machine-info">
+     <div class="machine-number">${index+1}</div>
+     <div>
+      <div class="machine-name">${escapeHtml(m.name)}</div>
+      <div class="machine-summary">${escapeHtml(summaryText(m.id))}</div>
+     </div>
+    </div>
+    <div class="arrow">›</div>
+   </div>`;
+  div.querySelector(".machine-header").addEventListener("click",()=>openMachineEditor(m.id));
+  list.appendChild(div);
+ });
+}
+
+function openMachineEditor(machineId){
+ const machine=machines.find(m=>m.id===machineId);
+ if(!machine)return;
+ const existing=document.getElementById("machineEditorModal");
+ if(existing)existing.remove();
+
+ const selected=getSelected(machineId);
+ const modal=document.createElement("div");
+ modal.className="machine-editor-modal";
+ modal.id="machineEditorModal";
+ modal.innerHTML=`
+  <div class="machine-editor-box">
+   <div class="editor-top">
+    <div>
+     <div class="editor-title">${escapeHtml(machine.name)}</div>
+     <div class="editor-subtitle">Makine durumlarını seç</div>
+    </div>
+    <button class="light editor-close">✕</button>
+   </div>
+   <div class="editor-content">
+    <div class="editor-section-title">Durumlar</div>
+    <div class="editor-help">Birden fazla seçenek seçebilirsin. Seçimler otomatik kaydedilir.</div>
+    <div class="all-statuses">
+     ${statuses.map(s=>`
+      <label class="big-option ${selected.includes(s.id)?"checked":""}">
+       <input type="checkbox" data-status="${escapeHtml(s.id)}" ${selected.includes(s.id)?"checked":""}>
+       <span class="big-option-icon">${s.icon}</span>
+       <span class="big-option-name">${escapeHtml(s.name)}</span>
+       <span class="check-mark">${selected.includes(s.id)?"✓":""}</span>
+      </label>`).join("")}
+    </div>
+   </div>
+   <div class="editor-footer">
+    <button class="light editor-up">↑ Yukarı</button>
+    <button class="light editor-down">↓ Aşağı</button>
+    <button class="light editor-edit">✏️ Düzenle</button>
+    <button class="light editor-delete">🗑 Sil</button>
+    <button class="primary editor-done">✓ Tamam</button>
+   </div>
+  </div>`;
+
+ document.body.appendChild(modal);
+
+ modal.querySelector(".editor-close").onclick=()=>modal.remove();
+ modal.onclick=e=>{if(e.target===modal)modal.remove()};
+
+ modal.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+  cb.onchange=()=>{
+   const current=getSelected(machineId).slice();
+   const id=cb.dataset.status;
+   const next=cb.checked?[...new Set([...current,id])]:current.filter(x=>x!==id);
+   setSelected(machineId,next);
+   cb.closest(".big-option").classList.toggle("checked",cb.checked);
+   cb.closest(".big-option").querySelector(".check-mark").textContent=cb.checked?"✓":"";
+   const card=[...document.querySelectorAll(".machine")][machines.findIndex(x=>x.id===machineId)];
+   if(card)card.querySelector(".machine-summary").textContent=summaryText(machineId);
+  };
+ });
+
+ modal.querySelector(".editor-up").onclick=()=>{
+  moveMachine(machineId,-1);
+  modal.remove();
+  const idx=machines.findIndex(x=>x.id===machineId);
+  if(idx>=0)openMachineEditor(machineId);
+ };
+ modal.querySelector(".editor-down").onclick=()=>{
+  moveMachine(machineId,1);
+  modal.remove();
+  const idx=machines.findIndex(x=>x.id===machineId);
+  if(idx>=0)openMachineEditor(machineId);
+ };
+ modal.querySelector(".editor-edit").onclick=()=>{
+  editMachine(machineId);
+  modal.remove();
+ };
+ modal.querySelector(".editor-delete").onclick=()=>{
+  deleteMachine(machineId);
+  modal.remove();
+ };
+ modal.querySelector(".editor-done").onclick=()=>modal.remove();
+}
+
+function addMachine(){
+ const name=prompt("Makine adını gir:");
+ if(!name||!name.trim())return;
+ machines.push({id:Date.now(),name:name.trim()});
+ saveData();render();renderMachineManagement();
+}
+
+function editMachine(id){
+ const m=machines.find(x=>x.id===id);
+ if(!m)return;
+ const name=prompt("Makine adı:",m.name);
+ if(name&&name.trim()){
+  m.name=name.trim();saveData();render();renderMachineManagement();
+ }
+}
+
+function deleteMachine(id){
+ const m=machines.find(x=>x.id===id);
+ if(!m||!confirm(m.name+" silinsin mi?"))return;
+ machines=machines.filter(x=>x.id!==id);
+ Object.keys(records).forEach(d=>{if(records[d])delete records[d][id]});
+ saveData();render();renderMachineManagement();
+}
+
+function moveMachine(id,direction){
+ const i=machines.findIndex(x=>x.id===id),j=i+direction;
+ if(i<0||j<0||j>=machines.length)return;
+ [machines[i],machines[j]]=[machines[j],machines[i]];
+ saveData();render();renderMachineManagement();
+}
+
+function addStatus(){
+ const name=prompt("Yeni durum adı:");
+ if(!name||!name.trim())return;
+ const icon=prompt("Emoji / simge:","🔵")||"🔵";
+ statuses.push({id:"status_"+Date.now(),name:name.trim(),icon});
+ saveData();render();renderStatusManagement();
+}
+
+function editStatus(id){
+ const s=statuses.find(x=>x.id===id);
+ if(!s)return;
+ const name=prompt("Durum adı:",s.name);
+ if(name&&name.trim()){
+  s.name=name.trim();saveData();render();renderStatusManagement();
+ }
+}
+
+function deleteStatus(id){
+ if(statuses.length<=1){alert("En az bir durum bulunmalıdır.");return}
+ const s=statuses.find(x=>x.id===id);
+ if(!s||!confirm(s.name+" silinsin mi?"))return;
+ statuses=statuses.filter(x=>x.id!==id);
+ Object.keys(records).forEach(d=>{
+  Object.keys(records[d]||{}).forEach(mid=>{
+   records[d][mid]=(records[d][mid]||[]).filter(x=>x!==id);
+  });
+ });
+ saveData();render();renderStatusManagement();
+}
+
+function moveStatus(id,direction){
+ const i=statuses.findIndex(x=>x.id===id),j=i+direction;
+ if(i<0||j<0||j>=statuses.length)return;
+ [statuses[i],statuses[j]]=[statuses[j],statuses[i]];
+ saveData();render();renderStatusManagement();
+}
+
+function renderMachineManagement(){
+ const list=document.getElementById("machineManagementList");
+ if(!list)return;
+ list.innerHTML=machines.map((m,i)=>`
+  <div class="management-row">
+   <div class="management-index">${i+1}</div>
+   <div class="management-name">${escapeHtml(m.name)}</div>
+   <div class="management-actions">
+    <button class="light" data-m-up="${m.id}">↑</button>
+    <button class="light" data-m-down="${m.id}">↓</button>
+    <button class="light" data-m-edit="${m.id}">✏️ Düzenle</button>
+    <button class="light" data-m-delete="${m.id}">🗑 Sil</button>
+   </div>
+  </div>`).join("")||'<div class="empty">Makine bulunmuyor.</div>';
+ list.querySelectorAll("[data-m-up]").forEach(b=>b.onclick=()=>moveMachine(Number(b.dataset.mUp),-1));
+ list.querySelectorAll("[data-m-down]").forEach(b=>b.onclick=()=>moveMachine(Number(b.dataset.mDown),1));
+ list.querySelectorAll("[data-m-edit]").forEach(b=>b.onclick=()=>editMachine(Number(b.dataset.mEdit)));
+ list.querySelectorAll("[data-m-delete]").forEach(b=>b.onclick=()=>deleteMachine(Number(b.dataset.mDelete)));
+}
+
+function renderStatusManagement(){
+ const list=document.getElementById("statusManagementList");
+ if(!list)return;
+ list.innerHTML=statuses.map((s,i)=>`
+  <div class="management-row">
+   <div class="management-index">${i+1}</div>
+   <div class="management-name">${s.icon} ${escapeHtml(s.name)}</div>
+   <div class="management-actions">
+    <button class="light" data-s-up="${escapeHtml(s.id)}">↑</button>
+    <button class="light" data-s-down="${escapeHtml(s.id)}">↓</button>
+    <button class="light" data-s-edit="${escapeHtml(s.id)}">✏️ Düzenle</button>
+    <button class="light" data-s-delete="${escapeHtml(s.id)}">🗑 Sil</button>
+   </div>
+  </div>`).join("")||'<div class="empty">Durum bulunmuyor.</div>';
+ list.querySelectorAll("[data-s-up]").forEach(b=>b.onclick=()=>moveStatus(b.dataset.sUp,-1));
+ list.querySelectorAll("[data-s-down]").forEach(b=>b.onclick=()=>moveStatus(b.dataset.sDown,1));
+ list.querySelectorAll("[data-s-edit]").forEach(b=>b.onclick=()=>editStatus(b.dataset.sEdit));
+ list.querySelectorAll("[data-s-delete]").forEach(b=>b.onclick=()=>deleteStatus(b.dataset.sDelete));
+}
+
+function openPage(id){document.getElementById(id)?.classList.add("open")}
+function closePage(id){document.getElementById(id)?.classList.remove("open")}
+
+function openReport(){
+ document.getElementById("reportDate").value=todayKey();
+ document.getElementById("reportModal").style.display="flex";
+}
+
+function closeReport(){document.getElementById("reportModal").style.display="none"}
+
+function formatDate(date){
+ const p=date.split("-");
+ return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:date;
+}
+
+function createReport(){
+ const date=document.getElementById("reportDate").value;
+ if(!date){alert("Lütfen tarih seçin.");return}
+
+ const rows=machines.map((m,i)=>{
+  const selected=getSelected(m.id,date);
+  const text=selected.map(id=>{
+   const s=statuses.find(x=>x.id===id);
+   return s?s.icon+" "+s.name:"";
+  }).filter(Boolean).join(" • ")||"Durum seçilmedi";
+
+  return `<tr>
+    <td class="no">${i+1}</td>
+    <td class="machine">${escapeHtml(m.name)}</td>
+    <td class="status">${escapeHtml(text)}</td>
+  </tr>`;
+ }).join("");
+
+ const w=window.open("","_blank");
+ if(!w){alert("Açılır pencere engellendi.");return}
+
+ w.document.write(`<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Üretim Makine Durum Raporu - ${formatDate(date)}</title>
+<style>
+ @page{size:A4 portrait;margin:8mm}
+ *{box-sizing:border-box}
+ body{
+   font-family:Arial,Helvetica,sans-serif;
+   color:#111;
+   margin:0;
+   font-size:9px;
+ }
+ .report-header{
+   border-bottom:1.5px solid #111;
+   padding-bottom:5px;
+   margin-bottom:6px;
+   display:flex;
+   justify-content:space-between;
+   align-items:flex-end;
+ }
+ h1{
+   font-size:15px;
+   margin:0;
+   font-weight:700;
+ }
+ .date{
+   font-size:9px;
+   font-weight:bold;
+   white-space:nowrap;
+ }
+ table{
+   width:100%;
+   border-collapse:collapse;
+   table-layout:fixed;
+ }
+ th,td{
+   border:1px solid #aaa;
+   padding:4px 6px;
+   vertical-align:middle;
+   line-height:1.15;
+ }
+ th{
+   background:#e9e9e9;
+   font-size:8.5px;
+   text-align:left;
+ }
+ th.no,td.no{
+   width:5%;
+   text-align:center;
+ }
+ th.machine,td.machine{
+   width:15%;
+   font-weight:bold;
+ }
+ th.status,td.status{
+   width:80%;
+ }
+ tr{page-break-inside:avoid}
+ .footer{
+   margin-top:5px;
+   padding-top:3px;
+   border-top:1px solid #aaa;
+   font-size:7px;
+   color:#555;
+   display:flex;
+   justify-content:space-between;
+ }
+ @media print{
+   body{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ }
+</style>
+</head>
+<body>
+ <div class="report-header">
+   <h1>ÜRETİM MAKİNE DURUM RAPORU</h1>
+   <div class="date">Tarih: ${formatDate(date)}</div>
+ </div>
+
+ <table>
+  <thead>
+   <tr>
+    <th class="no">#</th>
+    <th class="machine">Makine</th>
+    <th class="status">Seçilen Durumlar</th>
+   </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+ </table>
+
+ <div class="footer">
+   <span>Üretim Makine Kontrol</span>
+   <span>Rapor Tarihi: ${formatDate(date)}</span>
+ </div>
+
+ <script>
+   window.onload=function(){
+     setTimeout(function(){window.print()},150);
+   };
+ <\/script>
+</body>
+</html>`);
+ w.document.close();
+ closeReport();
+}
+function resetData(){
+ const date=todayKey();
+ if(!confirm("Bugün makinelerde seçilen tüm işler/durumlar sıfırlansın mı?"))return;
+ delete records[date];
+ saveData();
+ render();
+}
+
+document.getElementById("machinesPageBtn").onclick=()=>{renderMachineManagement();openPage("machinesPage")};
+document.getElementById("statusesPageBtn").onclick=()=>{renderStatusManagement();openPage("statusesPage")};
+document.getElementById("machinesClose").onclick=()=>closePage("machinesPage");
+document.getElementById("statusesClose").onclick=()=>closePage("statusesPage");
+document.getElementById("reportBtn").onclick=openReport;
+document.getElementById("closeReportBtn").onclick=closeReport;
+document.getElementById("createReportBtn").onclick=createReport;
+document.getElementById("resetBtn").onclick=resetData;
+document.getElementById("addMachineBtn").onclick=addMachine;
+document.getElementById("addStatusBtn").onclick=addStatus;
+
+loadData();
+render();
+renderMachineManagement();
+renderStatusManagement();
+
+</script>
+</body>
+</html>
