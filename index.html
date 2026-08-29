@@ -168,6 +168,9 @@ button{border:0;border-radius:9px;min-height:44px;padding:0 15px;font-weight:bol
  .management-row{align-items:flex-start}
  .management-actions{display:grid;grid-template-columns:1fr 1fr}
 }
+
+.editor-footer{display:block;padding:14px 20px;border-top:1px solid #e5e7eb}
+.editor-done{width:100%;min-height:46px;font-size:14px}
 </style>
 </head>
 <body>
@@ -334,13 +337,13 @@ function openMachineEditor(machineId){
    <div class="editor-top">
     <div>
      <div class="editor-title">${escapeHtml(machine.name)}</div>
-     <div class="editor-subtitle">Makine durumlarını seç</div>
+     <div class="editor-subtitle">İş / durum seçimi</div>
     </div>
-    <button class="light editor-close">✕</button>
+    <button class="light editor-close" type="button">✕</button>
    </div>
    <div class="editor-content">
-    <div class="editor-section-title">Durumlar</div>
-    <div class="editor-help">Birden fazla seçenek seçebilirsin. Seçimler otomatik kaydedilir.</div>
+    <div class="editor-section-title">Seçenekler</div>
+    <div class="editor-help">İstediğin seçenekleri işaretle.</div>
     <div class="all-statuses">
      ${statuses.map(s=>`
       <label class="big-option ${selected.includes(s.id)?"checked":""}">
@@ -352,17 +355,13 @@ function openMachineEditor(machineId){
     </div>
    </div>
    <div class="editor-footer">
-    <button class="light editor-up">↑ Yukarı</button>
-    <button class="light editor-down">↓ Aşağı</button>
-    <button class="light editor-edit">✏️ Düzenle</button>
-    <button class="light editor-delete">🗑 Sil</button>
-    <button class="primary editor-done">✓ Tamam</button>
+    <button class="primary editor-done" type="button">✓ Tamam</button>
    </div>
   </div>`;
 
  document.body.appendChild(modal);
-
  modal.querySelector(".editor-close").onclick=()=>modal.remove();
+ modal.querySelector(".editor-done").onclick=()=>modal.remove();
  modal.onclick=e=>{if(e.target===modal)modal.remove()};
 
  modal.querySelectorAll("input[type=checkbox]").forEach(cb=>{
@@ -377,30 +376,7 @@ function openMachineEditor(machineId){
    if(card)card.querySelector(".machine-summary").textContent=summaryText(machineId);
   };
  });
-
- modal.querySelector(".editor-up").onclick=()=>{
-  moveMachine(machineId,-1);
-  modal.remove();
-  const idx=machines.findIndex(x=>x.id===machineId);
-  if(idx>=0)openMachineEditor(machineId);
- };
- modal.querySelector(".editor-down").onclick=()=>{
-  moveMachine(machineId,1);
-  modal.remove();
-  const idx=machines.findIndex(x=>x.id===machineId);
-  if(idx>=0)openMachineEditor(machineId);
- };
- modal.querySelector(".editor-edit").onclick=()=>{
-  editMachine(machineId);
-  modal.remove();
- };
- modal.querySelector(".editor-delete").onclick=()=>{
-  deleteMachine(machineId);
-  modal.remove();
- };
- modal.querySelector(".editor-done").onclick=()=>modal.remove();
 }
-
 function addMachine(){
  const name=prompt("Makine adını gir:");
  if(!name||!name.trim())return;
@@ -551,29 +527,29 @@ function createReport(){
 <meta charset="UTF-8">
 <title>Üretim Makine Durum Raporu - ${formatDate(date)}</title>
 <style>
- @page{size:A4 portrait;margin:8mm}
+ @page{size:A4 portrait;margin:7mm 8mm}
  *{box-sizing:border-box}
  body{
    font-family:Arial,Helvetica,sans-serif;
    color:#111;
    margin:0;
-   font-size:9px;
+   font-size:10.5px;
  }
  .report-header{
-   border-bottom:1.5px solid #111;
-   padding-bottom:5px;
-   margin-bottom:6px;
+   border-bottom:2px solid #111;
+   padding-bottom:7px;
+   margin-bottom:8px;
    display:flex;
    justify-content:space-between;
    align-items:flex-end;
  }
  h1{
-   font-size:15px;
+   font-size:17px;
    margin:0;
    font-weight:700;
  }
  .date{
-   font-size:9px;
+   font-size:10.5px;
    font-weight:bold;
    white-space:nowrap;
  }
@@ -584,13 +560,13 @@ function createReport(){
  }
  th,td{
    border:1px solid #aaa;
-   padding:4px 6px;
+   padding:3.2px 6px;
    vertical-align:middle;
-   line-height:1.15;
+   line-height:1.05;
  }
  th{
    background:#e9e9e9;
-   font-size:8.5px;
+   font-size:10px;
    text-align:left;
  }
  th.no,td.no{
@@ -604,12 +580,14 @@ function createReport(){
  th.status,td.status{
    width:80%;
  }
- tr{page-break-inside:avoid}
+ tr{page-break-inside:avoid;height:9.4mm}
+ tbody tr td{font-size:10px}
+tr{page-break-inside:avoid}
  .footer{
    margin-top:5px;
    padding-top:3px;
    border-top:1px solid #aaa;
-   font-size:7px;
+   font-size:8px;
    color:#555;
    display:flex;
    justify-content:space-between;
